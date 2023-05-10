@@ -4,3 +4,4 @@ pandas
 pytest
 functions_framework
 gcsfs
+statsmodels
