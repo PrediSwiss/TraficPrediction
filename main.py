@@ -28,9 +28,10 @@ class Arima:
         self.id = id
         self.order = order
         flow_df = self.df[self.df['id'] == id]
-        flow_df = flow_df[target]
-        flow_df = flow_df.fillna(value=0, inplace=True)
-        model = ARIMA(flow_df, order=order)
+        flow_df = flow_df[[target]]
+        flow_df[target] = flow_df[target].astype(float)
+        flow_df.reset_index(drop=True, inplace=True)
+        model = ARIMA(flow_df[target], order=order)
         self.model_fit = model.fit()
 
     def forecast(self, time):
@@ -39,7 +40,7 @@ class Arima:
 
 def main():
     arima = Arima(bucket_name, ["2023-05"])
-    arima.train_model('CH:0542.05', 'flow_1', (1,1,3))
+    arima.train_model('CH:0542.05', 'flow_1', (1,2,3))
     arima.forecast(10)
 
 if __name__ == "__main__":
