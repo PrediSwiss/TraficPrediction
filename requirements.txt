@@ -5,3 +5,4 @@ pytest
 functions_framework
 gcsfs
 statsmodels
+pmdarima
