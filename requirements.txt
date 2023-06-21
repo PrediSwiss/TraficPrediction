@@ -6,3 +6,4 @@ functions_framework
 gcsfs
 statsmodels
 pmdarima
+prophet
