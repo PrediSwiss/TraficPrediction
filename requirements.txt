@@ -7,3 +7,4 @@ gcsfs
 statsmodels
 pmdarima
 prophet
+pystan==2.19.1.1
