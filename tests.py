@@ -1,5 +1,5 @@
 import pytest
 
 class Tests:
-    def passTest(self):
-        assert True
+    def test_pass(self):
+        assert 1 == 1
