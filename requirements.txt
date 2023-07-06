@@ -4,7 +4,4 @@ pandas
 pytest
 functions_framework
 gcsfs
-statsmodels
-pmdarima
-prophet
-pystan==2.19.1.1
+scikit-learn
