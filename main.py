@@ -12,10 +12,15 @@ import matplotlib.pyplot as plt
 # {"id": 'CH:123', "time": 3600, "store": True}
 @functions_framework.http
 def predict(request):
+    request_json = {}
+    content_type = request.headers["content-type"]
+    if content_type == "application/json":
+        request_json = request.get_json(silent=True)
+
     dataset = "2023.parquet"
     bucket_name = "prediswiss-parquet-data-daily"
     speed = 'speed_12'
-    id = request['id']
+    id = request_json['id']
     target = 'flow_11'
     date = 'publication_date'
     imputer = KNNImputer(n_neighbors=2, weights="uniform")
@@ -63,7 +68,7 @@ def predict(request):
     model = Prophet()
     model.fit(state_df)
 
-    future = model.make_future_dataframe(periods=request['time'], freq='min')
+    future = model.make_future_dataframe(periods=request_json['time'], freq='min')
     forecast = model.predict(future)
 
-    return forecast[:request['time']].to_json()
+    return forecast[:request_json['time']].to_json()
