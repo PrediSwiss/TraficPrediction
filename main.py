@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 # {"id": 'CH:123', "time": 3600, "store": True}
 @functions_framework.http
 def predict(request):
-    dataset = "2023.parquet"
-    bucket_name = "prediswiss-parquet-data-daily"
+    dataset = "2023-06.parquet"
+    bucket_name = "prediswiss-parquet-data"
 
     fs_gcs = gcsfs.GCSFileSystem()
     path = bucket_name + "/" + dataset
