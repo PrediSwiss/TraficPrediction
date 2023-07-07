@@ -14,17 +14,16 @@ import matplotlib.pyplot as plt
 def predict(request):
     dataset = "2023.parquet"
     bucket_name = "prediswiss-parquet-data-daily"
-
-    fs_gcs = gcsfs.GCSFileSystem()
-    path = bucket_name + "/" + dataset
-    dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
-    state_df = dataset.read(columns=[date, target, speed]).to_pandas()
-
     speed = 'speed_12'
     id = request['id']
     target = 'flow_11'
     date = 'publication_date'
     imputer = KNNImputer(n_neighbors=2, weights="uniform")
+
+    fs_gcs = gcsfs.GCSFileSystem()
+    path = bucket_name + "/" + dataset
+    dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
+    state_df = dataset.read(columns=[date, target, speed]).to_pandas()
 
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
