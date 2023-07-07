@@ -16,7 +16,7 @@ def predict(request):
     bucket_name = "prediswiss-parquet-data-daily"
 
     fs_gcs = gcsfs.GCSFileSystem()
-    path = bucket_name + "/" + dataset + ".parquet"
+    path = bucket_name + "/" + dataset
     table = pq.read_table(path, filesystem=fs_gcs)
     df = table.to_pandas()
 
