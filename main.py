@@ -12,13 +12,13 @@ import matplotlib.pyplot as plt
 # {"id": 'CH:123', "time": 3600, "store": True}
 @functions_framework.http
 def predict(request):
-    dataset = "2023-06.parquet"
-    bucket_name = "prediswiss-parquet-data"
+    dataset = "2023.parquet"
+    bucket_name = "prediswiss-parquet-data-daily"
 
     fs_gcs = gcsfs.GCSFileSystem()
     path = bucket_name + "/" + dataset
-    table = pq.read_table(path, filesystem=fs_gcs)
-    df = table.to_pandas()
+    dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
+    state_df = dataset.read(columns=[date, target, speed]).to_pandas()
 
     speed = 'speed_12'
     id = request['id']
@@ -26,9 +26,6 @@ def predict(request):
     date = 'publication_date'
     imputer = KNNImputer(n_neighbors=2, weights="uniform")
 
-    state_df = df[df['id'] == id].copy()
-
-    state_df = state_df[[date, target, speed]]
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
     state_df[speed] = pd.to_numeric(state_df[speed], errors='coerce')
