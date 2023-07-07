@@ -46,5 +46,6 @@ jobs:
         with:
           name: 'predict'
           runtime: 'python311'
+          timeout: '540'
           memory_mb: '8192'
           region: "us-east1"
