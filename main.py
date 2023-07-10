@@ -32,13 +32,17 @@ def predict(request):
     dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
     state_df = dataset.read(columns=[date, target, speed]).to_pandas()
 
-    if state_df.empty or state_df[speed].max() == None or state_df[target].max() == None:
+    if state_df.empty:
         return ""
 
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
     state_df[speed] = pd.to_numeric(state_df[speed], errors='coerce')
     state_df[date] = pd.to_datetime(state_df[date])
+
+    if np.isnan(state_df[speed].max()) or np.isnan(state_df[target].max()):
+        return ""
+
     state_df[target] = imputer.fit_transform(state_df[[target]])
     state_df[speed] = imputer.fit_transform(state_df[[speed]])
     state_df.index = state_df[date]
@@ -79,7 +83,6 @@ def predict(request):
 
     targetDateTime = targetDate + " " + targetHour
 
-    # Define the format of the datetime string
     format = "%Y-%m-%d %H:%M"
     datetime_obj = datetime.strptime(targetDateTime, format)
 
