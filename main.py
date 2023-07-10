@@ -32,7 +32,7 @@ def predict(request):
     dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
     state_df = dataset.read(columns=[date, target, speed]).to_pandas()
 
-    if state_df.empty or state_df[speed].max() == None or state_df[target].max():
+    if state_df.empty or state_df[speed].max() == None or state_df[target].max() == None:
         return ""
 
     state_df = state_df.sort_values(date)
