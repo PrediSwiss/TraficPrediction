@@ -8,8 +8,11 @@ import pandas as pd
 import pyarrow.parquet as pq
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
-# {"id": 'CH:123', "time": 3600, "store": True}
+bucket_store = "prediswiss-predict-storage"
+bucket_name = "prediswiss-parquet-data-daily"
+
 @functions_framework.http
 def predict(request):
     request_json = {}
@@ -18,12 +21,12 @@ def predict(request):
         request_json = request.get_json(silent=True)
 
     dataset = "2023.parquet"
-    bucket_name = "prediswiss-parquet-data-daily"
     speed = 'speed_12'
     id = request_json['id']
     target = 'flow_11'
     date = 'publication_date'
     imputer = KNNImputer(n_neighbors=2, weights="uniform")
+    store = request_json['store']
 
     fs_gcs = gcsfs.GCSFileSystem()
     path = bucket_name + "/" + dataset
@@ -68,7 +71,32 @@ def predict(request):
     model = Prophet()
     model.fit(state_df)
 
-    future = model.make_future_dataframe(periods=request_json['time'], freq='min')
+    targetDate = request_json['date']
+    targetHour = request_json['hour']
+    last_date = state_df['ds'].max()
+
+    targetDateTime = targetDate + " " + targetHour
+
+    # Define the format of the datetime string
+    format = "%Y-%m-%d %H:%M"
+    datetime_obj = datetime.strptime(targetDateTime, format)
+
+    last_date = last_date.replace(tzinfo=datetime_obj.tzinfo)
+
+    minutes_difference = (datetime_obj - last_date).total_seconds() / 60
+
+    future = model.make_future_dataframe(periods=minutes_difference, freq='min')
     forecast = model.predict(future)
 
-    return forecast[:request_json['time']].to_json()
+    result = forecast[:minutes_difference]
+
+    if store: 
+        if fs_gcs.exists(bucket_store) == False:
+            fs_gcs.mkdir(bucket_store)
+        
+        with fs_gcs.open(f"{bucket_store}/{id}", 'w') as file:
+            file.write(result)
+
+        return "ok"
+    else:
+        return result.to_json()
