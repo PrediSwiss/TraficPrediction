@@ -33,7 +33,7 @@ def predict(request):
     state_df = dataset.read(columns=[date, target, speed]).to_pandas()
 
     if state_df.empty or state_df[speed].max() == None or state_df[target].max():
-        return None
+        return ""
 
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
