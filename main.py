@@ -7,7 +7,6 @@ from multiprocessing import Pool
 import pandas as pd
 import pyarrow.parquet as pq
 import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 bucket_store = "prediswiss-predict-storage"
@@ -32,6 +31,9 @@ def predict(request):
     path = bucket_name + "/" + dataset
     dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
     state_df = dataset.read(columns=[date, target, speed]).to_pandas()
+
+    if state_df.empty:
+        return None
 
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
@@ -83,7 +85,7 @@ def predict(request):
 
     last_date = last_date.replace(tzinfo=datetime_obj.tzinfo)
 
-    minutes_difference = (datetime_obj - last_date).total_seconds() / 60
+    minutes_difference = int((datetime_obj - last_date).total_seconds() / 60)
 
     future = model.make_future_dataframe(periods=minutes_difference, freq='min')
     forecast = model.predict(future)
