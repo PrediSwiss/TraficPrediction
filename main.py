@@ -19,6 +19,7 @@ def predict(request):
     if content_type == "application/json":
         request_json = request.get_json(silent=True)
 
+    # Define dataset and variables
     dataset = "2023.parquet"
     speed = 'speed_12'
     id = request_json['id']
@@ -27,6 +28,7 @@ def predict(request):
     imputer = KNNImputer(n_neighbors=2, weights="uniform")
     store = request_json['store']
 
+    # Connect to Google Cloud Storage (GCS)
     fs_gcs = gcsfs.GCSFileSystem()
     path = bucket_name + "/" + dataset
     dataset = pq.ParquetDataset(path, filesystem=fs_gcs, filters=[('id', '=', id)])
@@ -35,6 +37,7 @@ def predict(request):
     if state_df.empty:
         return ""
 
+    # Preprocess the data
     state_df = state_df.sort_values(date)
     state_df[target] = pd.to_numeric(state_df[target], errors='coerce')
     state_df[speed] = pd.to_numeric(state_df[speed], errors='coerce')
@@ -43,6 +46,7 @@ def predict(request):
     if np.isnan(state_df[speed].max()) or np.isnan(state_df[target].max()):
         return ""
 
+    # Fill missing values and prepare the DataFrame
     state_df[target] = imputer.fit_transform(state_df[[target]])
     state_df[speed] = imputer.fit_transform(state_df[[speed]])
     state_df.index = state_df[date]
@@ -56,11 +60,13 @@ def predict(request):
         80: 80,
     }
 
+    # Assign a maximum speed based on the current maximum speed
     for condition, value in speed_mapping.items():
         if max_speed > condition:
             max_speed = value
             break
 
+    # Calculate the driving condition and adjust speed values
     state_df['drive'] = False
     state_df['precedent_speed'] = state_df['speed_12'].shift(1).fillna(0)
     state_df['precedent_speed'] = state_df['precedent_speed'].replace(0, np.nan)
@@ -68,15 +74,18 @@ def predict(request):
     state_df['drive'] = ((state_df['speed_12'] > 0) | ((state_df['speed_12'] == 0) & ((state_df['precedent_speed'].shift(1) > max_speed / 2) | (state_df['speed_12'].shift(1) > max_speed / 2))))
     state_df.loc[(state_df['speed_12'] == 0) & (state_df['drive'] == True), 'speed_12'] = max_speed
 
+    # Prepare the DataFrame for Prophet model
     state_df['y'] = state_df['speed_12']
     state_df.drop(columns=[speed, target, 'speed_12'], axis=1, inplace=True)
     state_df['ds'] = state_df.index
     state_df['ds'] = state_df['ds'].dt.tz_localize(None)
 
+    # Train the Prophet model
     from prophet import Prophet
     model = Prophet()
     model.fit(state_df)
 
+    # Prepare target datetime for prediction
     targetDate = request_json['date']
     targetHour = request_json['hour']
     last_date = state_df['ds'].max()
@@ -90,12 +99,14 @@ def predict(request):
 
     minutes_difference = int((datetime_obj - last_date).total_seconds() / 60)
 
+    # Generate future timestamps and make predictions
     future = model.make_future_dataframe(periods=minutes_difference, freq='min')
     forecast = model.predict(future)
 
     result = forecast[:minutes_difference]
 
     if store: 
+        # Store the result in GCS if requested
         if fs_gcs.exists(bucket_store) == False:
             fs_gcs.mkdir(bucket_store)
         
@@ -104,4 +115,5 @@ def predict(request):
 
         return "ok"
     else:
+        # Return the result as JSON if not storing
         return result.to_json()
